@@ -1,8 +1,8 @@
 ## Progress Tracker
 ### Day 1 (Milestone 1 – Setup & Auth)
-- [ ] #1 Scaffold backend + connect to MongoDB
-- [ ] #2 Create User model + Auth endpoints
-- [ ] #3 Build AuthContext + Login/Register pages
+- [x] #1 Scaffold backend + connect to MongoDB
+- [x] #2 Create User model + Auth endpoints
+- [x] #3 Build AuthContext + Login/Register pages
 
 ### Day 2 (Milestone 2 – Inventory & Item)
 - [ ] #4 Define Inventory schema + CRUD controllers/routes
