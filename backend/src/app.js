@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import authRoutes from './routes/authRoutes.js';
+import { protect } from './middleware/authMiddleware.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -20,10 +22,13 @@ app.get('/api/ping', (req, res) => {
   return res.status(200).json({ msg: 'pong' });
 });
 
-// (Future routes will be mounted here, e.g. authRoutes, inventoryRoutes, itemRoutes)
-// Example:
-// import authRoutes from './routes/authRoutes.js';
-// app.use('/api/auth', authRoutes);
+// Auth routes
+app.use('/api/auth', authRoutes);
+
+// Test route for protected endpoint
+app.get('/api/auth/test', protect, (req, res) => {
+    return res.status(200).json({ user: req.user });
+  });
 
 // === Error Handling Middleware ===
 
