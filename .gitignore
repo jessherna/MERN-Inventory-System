@@ -1,2 +1,8 @@
 # ignore docx files
 *.docx
+
+# ignore node_modules
+node_modules
+
+# ignore .env
+.env
