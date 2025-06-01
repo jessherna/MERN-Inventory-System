@@ -5,7 +5,7 @@
 - [x] #3 Build AuthContext + Login/Register pages
 
 ### Day 2 (Milestone 2 – Inventory & Item)
-- [ ] #4 Define Inventory schema + CRUD controllers/routes
+- [x] #4 Define Inventory schema + CRUD controllers/routes
 - [ ] #5 Define Item schema + CRUD controllers/routes
 - [ ] #6 Build InventoryList/InventoryForm components (UI + API calls)
 - [ ] #7 Build ItemList/ItemForm components (UI + API calls)

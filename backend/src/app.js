@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import { protect } from './middleware/authMiddleware.js';
+import inventoryRoutes from './routes/inventoryRoutes.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -29,6 +30,9 @@ app.use('/api/auth', authRoutes);
 app.get('/api/auth/test', protect, (req, res) => {
     return res.status(200).json({ user: req.user });
   });
+
+// Inventory routes
+app.use('/api/inventories', inventoryRoutes);
 
 // === Error Handling Middleware ===
 
