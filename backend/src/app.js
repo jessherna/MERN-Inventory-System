@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import { protect } from './middleware/authMiddleware.js';
 import inventoryRoutes from './routes/inventoryRoutes.js';
+import itemRoutes from './routes/itemRoutes.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -33,6 +34,9 @@ app.get('/api/auth/test', protect, (req, res) => {
 
 // Inventory routes
 app.use('/api/inventories', inventoryRoutes);
+
+// Item routes
+app.use('/api/items', itemRoutes);
 
 // === Error Handling Middleware ===
 
