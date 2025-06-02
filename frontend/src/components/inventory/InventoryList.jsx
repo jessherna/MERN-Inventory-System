@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableHeader,
@@ -10,6 +11,12 @@ import {
 import { Button } from "../ui/button";
 
 const InventoryList = ({ inventories, onEdit, onDelete, onPrint }) => {
+  const navigate = useNavigate();
+
+  const handleInventoryClick = (inventoryId) => {
+    navigate(`/items/${inventoryId}`);
+  };
+
   return (
     <div className="overflow-x-auto w-full">
       <Table className="min-w-[600px]">
@@ -31,7 +38,12 @@ const InventoryList = ({ inventories, onEdit, onDelete, onPrint }) => {
           ) : (
             inventories.map((inv) => (
               <TableRow key={inv._id} className="hover:bg-gray-50">
-                <TableCell className="font-medium">{inv.name}</TableCell>
+                <TableCell 
+                  className="font-medium cursor-pointer hover:text-blue-600"
+                  onClick={() => handleInventoryClick(inv._id)}
+                >
+                  {inv.name}
+                </TableCell>
                 <TableCell>{inv.description || "-"}</TableCell>
                 <TableCell>
                   {new Date(inv.createdAt).toLocaleDateString()}

@@ -162,3 +162,41 @@ export const deleteInventory = async (req, res) => {
     return res.status(500).json({ message: "Server error while deleting inventory." });
   }
 };
+
+/**
+ * @desc    Get a single inventory item by ID (only if it belongs to the authenticated user).
+ * @route   GET /api/inventories/:id
+ * @access  Private
+ *
+ * @param   {Object} req  - Express request object.
+ * @param   {Object} req.user - Populated by `protect`, contains `req.user._id`.
+ * @param   {string} req.params.id - Inventory document ID.
+ * @param   {Object} res  - Express response object.
+ *
+ * @returns {Inventory}  200 - JSON of the inventory document.
+ * @returns {401}        - If no valid token / no `req.user`.
+ * @returns {403}        - If the inventory does not belong to this user.
+ * @returns {404}        - If no inventory is found with the given ID.
+ * @returns {500}        - On server/database error.
+ */
+export const getInventoryById = async (req, res) => {
+  try {
+    const inventoryId = req.params.id;
+
+    // Find the inventory by ID
+    const inventory = await Inventory.findById(inventoryId);
+    if (!inventory) {
+      return res.status(404).json({ message: "Inventory not found." });
+    }
+
+    // Check ownership
+    if (inventory.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized to view this inventory." });
+    }
+
+    return res.status(200).json(inventory);
+  } catch (error) {
+    console.error("getInventoryById error:", error);
+    return res.status(500).json({ message: "Server error while fetching inventory." });
+  }
+};

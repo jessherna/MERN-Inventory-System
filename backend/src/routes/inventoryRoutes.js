@@ -4,6 +4,7 @@ import {
   createInventory,
   updateInventory,
   deleteInventory,
+  getInventoryById,
 } from "../controllers/inventoryController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -15,6 +16,7 @@ router.route("/")
   .post(protect, createInventory);  // POST /api/inventories
 
 router.route("/:id")
+  .get(protect, getInventoryById)
   .put(protect, updateInventory)    // PUT    /api/inventories/:id
   .delete(protect, deleteInventory); // DELETE /api/inventories/:id
 
