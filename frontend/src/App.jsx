@@ -4,6 +4,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import LoginForm from "./components/auth/LoginForm";
 import RegisterForm from "./components/auth/RegisterForm";
 import DashboardPage from "./pages/Dashboard";
+import InventoryPage from "./pages/InventoryPage";
 import PrivateRoute from "./components/PrivateRoute";
 
 const App = () => {
@@ -17,6 +18,7 @@ const App = () => {
         {/* Private routes (wrapped by PrivateRoute) */}
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/inventories" element={<InventoryPage />} />
         </Route>
 
         {/* Redirect root to /login or /dashboard depending on auth */}

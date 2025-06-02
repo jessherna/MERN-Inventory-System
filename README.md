@@ -7,7 +7,7 @@
 ### Day 2 (Milestone 2 – Inventory & Item)
 - [x] #4 Define Inventory schema + CRUD controllers/routes
 - [x] #5 Define Item schema + CRUD controllers/routes
-- [ ] #6 Build InventoryList/InventoryForm components (UI + API calls)
+- [x] #6 Build InventoryList/InventoryForm components (UI + API calls)
 - [ ] #7 Build ItemList/ItemForm components (UI + API calls)
 
 ### Day 3 (Milestone 3 – Print & Deploy)

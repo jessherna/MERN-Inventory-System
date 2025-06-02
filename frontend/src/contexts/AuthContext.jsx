@@ -17,14 +17,19 @@ export const AuthProvider = ({ children }) => {
     }
   });
   const [token, setToken] = useState(() => {
-    return localStorage.getItem("auth_token") || null;
+    const storedToken = localStorage.getItem("auth_token") || null;
+    console.log("AuthContext: Initial token from localStorage:", storedToken);
+    return storedToken;
   });
 
   useEffect(() => {
+    console.log("AuthContext: token state changed to:", token);
     if (token) {
+      console.log("AuthContext: Setting Authorization header with token");
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       localStorage.setItem("auth_token", token);
     } else {
+      console.log("AuthContext: Removing Authorization header");
       delete api.defaults.headers.common["Authorization"];
       localStorage.removeItem("auth_token");
     }
