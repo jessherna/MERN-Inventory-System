@@ -11,7 +11,7 @@
 - [x] #7 Build ItemList/ItemForm components (UI + API calls)
 
 ### Day 3 (Milestone 3 - Print & Deploy)
-- [ ] #8 Implement PrintableTable + print CSS
+- [x] #8 Implement PrintableTable + print CSS
 - [ ] #9 Responsive/Tailwind polish + loading/error states
 - [ ] #10 Deploy backend & frontend on Render
 - [ ] #11 Write README, API docs, and code comments

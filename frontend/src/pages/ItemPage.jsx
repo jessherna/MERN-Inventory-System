@@ -1,4 +1,9 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -6,16 +11,11 @@ import { Button } from "../components/ui/button";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../utils/api";
 import ItemForm from "../components/items/ItemForm";
-// Remove ItemList import
-// import ItemList from "../components/items/ItemList";
-
-// Import DataTable components
-import { DataTable } from "@/components/ui/data-table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { DataTable } from "../components/ui/data-table";
+import { Checkbox } from "../components/ui/checkbox";
+import { DataTableColumnHeader } from "../components/ui/data-table-column-header";
 
 import {
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
@@ -34,12 +34,11 @@ import {
 import { ChevronDown } from "lucide-react";
 
 const ItemPage = () => {
-  const { inventoryId } = useParams();
   const { user, token, logout } = useAuth();
+  const { inventoryId } = useParams();
   const navigate = useNavigate();
 
   const [items, setItems] = useState([]);
-  // Keep search state for the input, will connect to table filtering
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -47,16 +46,20 @@ const ItemPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
-  const [inventoryName, setInventoryName] = useState("");
-  const [printData, setPrintData] = useState(null);
-
-  // Add state for react-table
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
 
-  // Define columns for the DataTable
+  // Filter items by search term
+  const filteredItems = useMemo(() => {
+    if (!search) return items;
+    return items.filter((item) =>
+      item.name.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [items, search]);
+
+  // Table column definitions
   const columns = [
     {
       id: "select",
@@ -66,14 +69,18 @@ const ItemPage = () => {
             table.getIsAllPageRowsSelected() ||
             (table.getIsSomePageRowsSelected() && "indeterminate")
           }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          onCheckedChange={(value) =>
+            table.toggleAllPageRowsSelected(!!value)
+          }
           aria-label="Select all"
         />
       ),
       cell: ({ row }) => (
         <Checkbox
           checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          onCheckedChange={(value) =>
+            row.toggleSelected(!!value)
+          }
           aria-label="Select row"
         />
       ),
@@ -85,8 +92,21 @@ const ItemPage = () => {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Name" />
       ),
-      // No click handler on name here, will rely on a separate button or action
-      // for editing/viewing details if needed later.
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <div
+            className="font-medium cursor-pointer hover:text-blue-600"
+            onClick={() =>
+              navigate(
+                `/inventories/${inventoryId}/items/${item._id}`
+              )
+            }
+          >
+            {item.name}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "sku",
@@ -94,18 +114,18 @@ const ItemPage = () => {
     },
     {
       accessorKey: "quantity",
-      header: "Quantity",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Quantity" />
+      ),
     },
     {
       accessorKey: "price",
-      header: "Price",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Price" />
+      ),
       cell: ({ row }) => {
-        const price = parseFloat(row.original.price);
-        if (isNaN(price)) return "-"; // Handle cases where price is not a number
-        return price.toLocaleString(undefined, {
-          style: "currency",
-          currency: "USD",
-        });
+        const price = row.original.price ?? 0;
+        return `$${price.toFixed(2)}`;
       },
     },
     {
@@ -135,9 +155,8 @@ const ItemPage = () => {
     },
   ];
 
-  // Initialize react-table
   const table = useReactTable({
-    data: items,
+    data: filteredItems,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -155,122 +174,117 @@ const ItemPage = () => {
     },
   });
 
-  // Effect to apply search filter to table
-  useEffect(() => {
-    table.getColumn("name")?.setFilterValue(search);
-  }, [search, table]);
-
-  // Fetch the inventory name for the header (optional)
-  const fetchInventoryName = useCallback(async () => {
-    if (!token || !inventoryId) return; // Add check for inventoryId
-    try {
-      const resp = await api.get(`/inventories/${inventoryId}`);
-      setInventoryName(resp.data.name);
-    } catch (err) {
-      console.error("Error fetching inventory name:", err);
-      setInventoryName("Unknown Inventory"); // Set a default name on error
-    }
-  }, [inventoryId, token]);
-
   // Fetch items for this inventory
   const fetchItems = useCallback(async () => {
-    if (!token || !inventoryId) {
-       setItems([]); // Clear items if no token or inventoryId
-       return;
-    }
+    if (!token) return;
     setLoading(true);
     setError("");
     try {
-      // Fetch all items for the inventory, filtering will be done by react-table
-      const resp = await api.get(
-        `/items?inventoryId=${encodeURIComponent(inventoryId)}`
+      const response = await api.get(
+        `/items?inventoryId=${encodeURIComponent(inventoryId)}${
+          search ? `&search=${encodeURIComponent(search)}` : ""
+        }`
       );
-      setItems(resp.data);
+      setItems(response.data);
     } catch (err) {
       console.error("Error fetching items:", err);
       setError(
-        err.response?.data?.message || "Failed to load items. Please try again."
+        err.response?.data?.message ||
+          "Failed to load items. Please try again."
       );
-      setItems([]); // Clear items on error
     } finally {
       setLoading(false);
     }
-  }, [inventoryId, token]); // Remove search from dependency array
+  }, [inventoryId, search, token]);
 
-  // Run fetch functions whenever dependencies change
   useEffect(() => {
-    if (token && inventoryId) {
-      fetchInventoryName();
-      fetchItems();
-    }
-  }, [fetchInventoryName, fetchItems, token, inventoryId]); // Add inventoryId to dependency array
+    fetchItems();
+  }, [fetchItems]);
 
-  // If not logged in, prompt to log in
   if (!user) {
     return (
       <div className="px-4 py-6 max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold mb-4">Items</h1>
-        <p className="text-red-500">You must log in to view items.</p>
-        <Button onClick={() => navigate('/login')}>Go To Login</Button>
+        <p className="text-red-500">
+          You must log in to view items.
+        </p>
+        <Button onClick={() => logout()}>Go To Login</Button>
       </div>
     );
   }
 
-  // Handler: open form to create
+  // Handlers for create/edit/delete
   const handleCreate = () => {
     setEditingItem(null);
     setShowForm(true);
   };
 
-  // Handler: open form to edit
   const handleEdit = (item) => {
     setEditingItem(item);
     setShowForm(true);
   };
 
-  // Handler: delete item
   const handleDelete = async (id) => {
-    const confirmed = window.confirm("Delete this item?");
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this item?"
+    );
     if (!confirmed) return;
 
     try {
       await api.delete(`/items/${id}`);
-      fetchItems(); // Refresh list after deletion
+      fetchItems();
     } catch (err) {
       console.error("Error deleting item:", err);
-      alert(err.response?.data?.message || "Failed to delete. Try again.");
+      alert(
+        err.response?.data?.message ||
+          "Failed to delete. Try again."
+      );
     }
   };
 
-  // Handler: form submit for create or update
   const handleFormSubmit = async (values) => {
     try {
       if (editingItem) {
-        // PUT /items/:id
         await api.put(`/items/${editingItem._id}`, values);
       } else {
-        // POST /items
-        // Ensure inventoryId is included in the payload for new items
-        await api.post("/items", { inventoryId, ...values });
+        await api.post("/items", {
+          ...values,
+          inventoryId,
+        });
       }
       setShowForm(false);
       setEditingItem(null);
-      fetchItems(); // Refresh list after save
+      fetchItems();
     } catch (err) {
       console.error("Error saving item:", err);
-      alert(err.response?.data?.message || "Failed to save. Try again.");
+      alert(
+        err.response?.data?.message ||
+          "Failed to save. Try again."
+      );
     }
   };
 
-  // Handler: print selected rows
+  // Format a date as “Month day, year” (e.g. “June 5, 2025”)
+  const formatDate = (dateObj) =>
+    dateObj.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+  // Handler: open a new window with just the table and print it
   const handlePrintSelected = () => {
-    const selectedRows = table.getFilteredSelectedRowModel().rows;
+    const selectedRows =
+      table.getFilteredSelectedRowModel().rows;
     if (selectedRows.length === 0) {
       alert("Please select at least one item to print.");
       return;
     }
-    const selectedItems = selectedRows.map((row) => row.original);
+    const selectedItems = selectedRows.map(
+      (row) => row.original
+    );
 
+    // Define columns + rows for the print window
     const columnsToPrint = [
       { key: "name", header: "Name" },
       { key: "sku", header: "SKU" },
@@ -279,81 +293,157 @@ const ItemPage = () => {
     ];
     const rowsToPrint = selectedItems.map((item) => ({
       name: item.name,
-      sku: item.sku || "",
+      sku: item.sku || "—",
       quantity: item.quantity,
-      price: item.price.toLocaleString(undefined, {
-        style: "currency",
-        currency: "USD",
-      }),
+      price: `$${(item.price ?? 0).toFixed(2)}`,
     }));
-    setPrintData({
-      columns: columnsToPrint,
-      rows: rowsToPrint,
-      title: `Items in ${inventoryName || "Inventory"}`,
-    });
 
+    // Build a standalone HTML document
+    const printedAt = new Date();
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Selected Item List</title>
+          <style>
+            body {
+              font-family: sans-serif;
+              margin: 1in;
+              color: #000;
+            }
+            h1 {
+              text-align: center;
+              margin-bottom: 20px;
+              font-size: 1.5rem;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px;
+              text-align: left;
+              font-size: 0.9rem;
+            }
+            th {
+              background-color: #f2f2f2;
+            }
+            footer {
+              text-align: center;
+              font-size: 0.8rem;
+              color: #555;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Selected Item List</h1>
+          <table>
+            <thead>
+              <tr>
+                ${columnsToPrint
+                  .map(
+                    (col) =>
+                      `<th>${col.header}</th>`
+                  )
+                  .join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsToPrint
+                .map(
+                  (row) => `
+                <tr>
+                  ${columnsToPrint
+                    .map(
+                      (col) =>
+                        `<td>${row[col.key]}</td>`
+                    )
+                    .join("")}
+                </tr>`
+                )
+                .join("")}
+            </tbody>
+          </table>
+          <footer>
+            Inventory App – Printed on ${formatDate(
+              printedAt
+            )}
+          </footer>
+        </body>
+      </html>
+    `;
+
+    // Open a new window, write the HTML, and invoke print()
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+
+    // Delay slightly to ensure content loads, then print
     setTimeout(() => {
-      window.print();
+      printWindow.print();
+      printWindow.close();
     }, 100);
   };
 
   return (
     <div className="px-4 py-6 max-w-5xl mx-auto">
-      {/* Header */}
+      {/* Header + Logout */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
-        <div>
-          <h1 className="text-3xl font-bold">
-            Items in {inventoryName || "Inventory"}
-          </h1>
-        </div>
+        <h1 className="text-3xl font-bold">Items</h1>
+        <Button variant="outline" onClick={logout}>
+          Logout
+        </Button>
       </div>
 
-      {/* Main Content: Loading, Error, or Table */}
+      {/* Loading / Error */}
       {loading ? (
         <p className="text-center py-8">Loading items…</p>
       ) : error ? (
-        <p className="text-red-500 text-center py-4">{error}</p>
+        <p className="text-red-500 text-center py-4">
+          {error}
+        </p>
       ) : items.length > 0 ? (
         <>
-          {/* Search, Column Visibility, and New Item Button */}
+          {/* Search + Columns + New Item */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-2 w-full sm:w-1/2">
               <Label htmlFor="search" className="sr-only">
                 Search Items
               </Label>
-              {/* Connect search input to table filtering */}
               <Input
                 id="search"
                 placeholder="Filter names..."
-                value={table.getColumn("name")?.getFilterValue() ?? ""}
-                onChange={(event) =>
-                  table.getColumn("name")?.setFilterValue(event.target.value)
-                }
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 className="max-w-sm"
               />
-              {/* Column visibility dropdown (optional but good for consistency) */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="ml-auto">
-                    Columns <ChevronDown className="ml-2 h-4 w-4" />
+                    Columns{" "}
+                    <ChevronDown className="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                  <DropdownMenuLabel>
+                    Toggle columns
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {table
                     .getAllColumns()
-                    .filter((column) => column.getCanHide())
-                    .map((column) => (
+                    .filter((col) => col.getCanHide())
+                    .map((col) => (
                       <DropdownMenuCheckboxItem
-                        key={column.id}
+                        key={col.id}
                         className="capitalize"
-                        checked={column.getIsVisible()}
+                        checked={col.getIsVisible()}
                         onCheckedChange={(value) =>
-                          column.toggleVisibility(!!value)
+                          col.toggleVisibility(!!value)
                         }
                       >
-                        {column.id}
+                        {col.id}
                       </DropdownMenuCheckboxItem>
                     ))}
                 </DropdownMenuContent>
@@ -370,22 +460,38 @@ const ItemPage = () => {
               variant="outline"
               onClick={handlePrintSelected}
               disabled={
-                table.getFilteredSelectedRowModel().rows.length === 0
+                table.getFilteredSelectedRowModel().rows
+                  .length === 0
               }
             >
               Print Selected (
-              {table.getFilteredSelectedRowModel().rows.length})
+              {
+                table.getFilteredSelectedRowModel().rows
+                  .length
+              }
+              )
             </Button>
           </div>
 
-          {/* DataTable Component */}
-          <DataTable columns={columns} data={items} table={table} />
+          {/* DataTable */}
+          <DataTable
+            columns={columns}
+            data={items}
+            table={table}
+          />
 
-          {/* Pagination Controls (optional but good for consistency) */}
+          {/* Pagination */}
           <div className="flex items-center justify-end space-x-2 py-4">
             <div className="flex-1 text-sm text-muted-foreground">
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
-              {table.getFilteredRowModel().rows.length} row(s) selected.
+              {
+                table.getFilteredSelectedRowModel().rows
+                  .length
+              }{" "}
+              of{" "}
+              {
+                table.getFilteredRowModel().rows.length
+              }{" "}
+              row(s) selected.
             </div>
             <div className="space-x-2">
               <Button
@@ -408,59 +514,24 @@ const ItemPage = () => {
           </div>
         </>
       ) : (
-        // Display message when no items found after loading and no error
+        // No items found
         !loading &&
         !error && (
-          <p className="text-center py-8">No items found in this inventory.</p>
+          <p className="text-center py-8">No items found.</p>
         )
       )}
 
       {/* ItemForm Modal */}
       {showForm && (
         <ItemForm
-          inventoryId={inventoryId}
           initialData={editingItem}
+          inventoryId={inventoryId}
           onSubmit={handleFormSubmit}
           onClose={() => {
             setShowForm(false);
             setEditingItem(null);
           }}
         />
-      )}
-
-      {/* Printable Table (only visible in print) */}
-      {printData && (
-        <div className="print:block hidden mt-8">
-          <h2 className="text-xl font-semibold mb-4">{printData.title}</h2>
-          <table className="w-full border-collapse">
-            <thead className="border-b">
-              <tr>
-                {printData.columns.map((col) => (
-                  <th
-                    key={col.key}
-                    className="text-left px-2 py-1 border"
-                  >
-                    {col.header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {printData.rows.map((row, idx) => (
-                <tr
-                  key={idx}
-                  className={idx % 2 === 0 ? "bg-gray-100" : ""}
-                >
-                  {printData.columns.map((col) => (
-                    <td key={col.key} className="px-2 py-1 border">
-                      {row[col.key]}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       )}
     </div>
   );
